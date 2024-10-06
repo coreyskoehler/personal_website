@@ -1,3 +1,4 @@
+
 // Fading effect
 window.addEventListener('scroll', () => {
     const header = document.getElementById('header');
@@ -22,8 +23,8 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 const globeGeometry = new THREE.SphereGeometry(5, 32, 32);
 const globeMaterial = new THREE.MeshPhongMaterial({
     map: new THREE.TextureLoader().load('textures/earth_lights_lrg.jpg'),
-    bumpMap: new THREE.TextureLoader().load('https://example.com/earth-bump-map.jpg'),
-    bumpScale: 0.05,
+    bumpMap: new THREE.TextureLoader().load('textures/earth_black_white.jpg'),
+    bumpScale: 0.1,
 });
 const globe = new THREE.Mesh(globeGeometry, globeMaterial);
 scene.add(globe);
@@ -42,6 +43,7 @@ let globeController;
 let satelliteMeshes = [];
 
 Module.onRuntimeInitialized = async () => {
+
     globeController = Module._createGlobeController();
     
     // Create satellite meshes
@@ -53,6 +55,23 @@ Module.onRuntimeInitialized = async () => {
         scene.add(satelliteMesh);
         satelliteMeshes.push(satelliteMesh);
     }
+    
+    // Load the satellite model using GLTFLoader
+    /*
+    const loader = new THREE.GLTFLoader();
+
+    loader.load('textures/satellite.gltf', (gltf) => {
+        const satelliteModel = gltf.scene;
+
+        for (let i = 0; i < 3; i++) {  // Assuming 3 satellites
+            const satelliteMesh = satelliteModel.clone();  // Clone the loaded satellite model
+            scene.add(satelliteMesh);
+            satelliteMeshes.push(satelliteMesh);
+        }
+    }, undefined, (error) => {
+        console.error('An error happened while loading the satellite model', error);
+    });
+    */
 };
 
 // Animation loop
@@ -73,7 +92,7 @@ function animate() {
         Module._free(positionsPtr);
     }
     
-    globe.rotation.y += 0.005;
+    globe.rotation.y += 0.001;
     renderer.render(scene, camera);
 }
 animate();
