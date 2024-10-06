@@ -1,0 +1,3 @@
+#Emcc compilation
+*.wasm
+*.js
