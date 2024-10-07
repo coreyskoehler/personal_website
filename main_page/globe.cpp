@@ -17,14 +17,17 @@ public:
         x = radius * std::cos(theta);
         y = radius * std::sin(theta);
     }
-    void mouseDrag(double rotationX, double rotationY){
-        double radius = std::sqrt(x*x + y*y + z*z);
-        // rotate around x axis
-        x = x * std::cos(rotationX) - z * sin(rotationX);
-        z = x * std::sin(rotationX) + z * cos(rotationX);
-        // rotate around y axis
-        z = z * std::cos(rotationY) - y * sin(rotationY);
-        y = z * std::sin(rotationY) + y * cos(rotationX);
+    void mouseDrag(double angleX, double angleY){
+        // Rotate around Y-axis (left-right)
+        double tempX = x * std::cos(angleY) - z * std::sin(angleY);
+        double tempZ = x * std::sin(angleY) + z * std::cos(angleY);
+        x = tempX;
+        z = tempZ;
+
+        // Rotate around X-axis (up-down)
+        double tempY = y * std::cos(angleX) - z * std::sin(angleX);
+        z = y * std::sin(angleX) + z * std::cos(angleX);
+        y = tempY;
     }
 };
 

@@ -45,46 +45,10 @@ let globeController;
 let satelliteMeshes = [];
 
 // Test sat 3d model 
-/*
-const loader = new GLTFLoader();
-loader.load('textures/satellite.glb', (gltf) => {
-    gltf.scene.position.set(5, 5, 0);
-
-   // Change the material of the model to have a faint blue glow
-   gltf.scene.traverse((child) => {
-    if (child.isMesh) {
-        child.material = new THREE.MeshStandardMaterial({
-            color: 0x36a1d0, 
-            emissive: 0xADD8E6, 
-            emissiveIntensity: 0.3, 
-            roughness: 0.5,
-            metalness: 0.2
-        });
-    }
-});
-
-    scene.add(gltf.scene);
-    console.log('Model loaded successfully!');
-}, undefined, (error) => {
-    console.error('An error occurred while loading the model:', error);
-});
-*/
 
 Module.onRuntimeInitialized = async () => {
 
     globeController = Module._createGlobeController();
-    
-    /*
-    // Create satellite meshes
-    const satelliteGeometry = new THREE.SphereGeometry(0.1, 16, 16);
-    const satelliteMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-    
-    for (let i = 0; i < 3; i++) {  // Assuming 3 satellites
-        const satelliteMesh = new THREE.Mesh(satelliteGeometry, satelliteMaterial);
-        scene.add(satelliteMesh);
-        satelliteMeshes.push(satelliteMesh);
-    }
-    */
     
     // Load the satellite model using GLTFLoader
     
@@ -115,24 +79,44 @@ Module.onRuntimeInitialized = async () => {
     
 };
 
-// Animation loop
-function animate() {
-    requestAnimationFrame(animate);
+let globeRotation = new THREE.Euler(0, 0, 0, 'XYZ');
+const defaultRotationSpeed = 0.001; 
+// Interaction
+let isDragging = false;
+let previousMousePosition = { x: 0, y: 0 };
+
+function updateSatellitePositions() {
+    const positionsPtr = Module._malloc(9 * 8);  // 9 doubles (3 satellites * 3 coordinates)
+    Module._getSatellitePositions(globeController, positionsPtr);
+    const positions = new Float64Array(Module.HEAPF64.buffer, positionsPtr, 9);
     
-    if (globeController) {
-        //Module._updateSatellites(globeController, 0.016);  // Assuming 60 FPS
-        Module._updateSatellites(globeController, 0.0);
-        const positionsPtr = Module._malloc(9 * 8);  // 9 doubles (3 satellites * 3 coordinates)
-        Module._getSatellitePositions(globeController, positionsPtr);
-        const positions = new Float64Array(Module.HEAPF64.buffer, positionsPtr, 9);
-        for (let i = 0; i < satelliteMeshes.length; i++) {
-            satelliteMeshes[i].position.set(positions[i*3], positions[i*3+1], positions[i*3+2]);
-        }
+    for (let i = 0; i < satelliteMeshes.length; i++) {
+        const pos = new THREE.Vector3(positions[i*3], positions[i*3+1], positions[i*3+2]);
         
-        Module._free(positionsPtr);
+        // Apply globe rotation to satellite position
+        pos.applyEuler(globeRotation);
+        
+        satelliteMeshes[i].position.copy(pos);
     }
     
-    //globe.rotation.y += 0.001;
+    Module._free(positionsPtr);
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+
+    if (globeController) {
+        Module._updateSatellites(globeController, 0.016);
+        
+        if (!isDragging) {
+            // Apply default rotation when not dragging
+            globeRotation.y += defaultRotationSpeed;
+            globe.rotation.copy(globeRotation);
+        }
+        
+        updateSatellitePositions();
+    }
+    
     renderer.render(scene, camera);
 }
 animate();
@@ -144,9 +128,7 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Interaction
-let isDragging = false;
-let previousMousePosition = { x: 0, y: 0 };
+
 
 document.getElementById('globe-canvas'). addEventListener('mousedown', (e) => {
     isDragging = true;
@@ -162,21 +144,16 @@ document.addEventListener('mousemove', (e) => {
             x: e.clientX - previousMousePosition.x,
             y: e.clientY - previousMousePosition.y
         };
-        console.log("deltaMove.x: ", deltaMove.x);
-        Module._mouseDragSatellites(deltaMove.x*0.01, deltaMove.y*0.01);
 
-        const positionsPtr = Module._malloc(9 * 8);  // 9 doubles (3 satellites * 3 coordinates)
-        Module._getSatellitePositions(globeController, positionsPtr);
-        const positions = new Float64Array(Module.HEAPF64.buffer, positionsPtr, 9);
-        for (let i = 0; i < satelliteMeshes.length; i++) {
-            satelliteMeshes[i].position.set(positions[i*3], positions[i*3+1], positions[i*3+2]);
-        }
-        
-        Module._free(positionsPtr);
+        // Update globe rotation
+        globeRotation.y += deltaMove.x * 0.01;
+        globeRotation.x += deltaMove.y * 0.01;
 
-        globe.rotation.y += deltaMove.x * 0.01;
-        globe.rotation.x += deltaMove.y * 0.01;
+        // Apply rotation to the globe mesh
+        globe.rotation.copy(globeRotation);
 
+        // Update satellite positions
+        updateSatellitePositions();
     }
 
     previousMousePosition = {
@@ -184,6 +161,7 @@ document.addEventListener('mousemove', (e) => {
         y: e.clientY
     };
 });
+
 
 // Clean up when the page is unloaded
 window.addEventListener('unload', () => {
