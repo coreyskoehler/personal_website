@@ -44,8 +44,6 @@ camera.position.z = 15;
 let globeController;
 let satelliteMeshes = [];
 
-// Test sat 3d model 
-
 Module.onRuntimeInitialized = async () => {
 
     globeController = Module._createGlobeController();
@@ -85,18 +83,37 @@ const defaultRotationSpeed = 0.001;
 let isDragging = false;
 let previousMousePosition = { x: 0, y: 0 };
 
+function calculateOrbitalFrame(position) {
+    const radialVector = position.clone().normalize();
+    const tangentialVector = new THREE.Vector3(-position.y, position.x, 0).normalize();
+    const normalVector = new THREE.Vector3().crossVectors(radialVector, tangentialVector);
+    
+    return new THREE.Matrix4().makeBasis(tangentialVector, normalVector, radialVector);
+}
+
 function updateSatellitePositions() {
     const positionsPtr = Module._malloc(9 * 8);  // 9 doubles (3 satellites * 3 coordinates)
     Module._getSatellitePositions(globeController, positionsPtr);
     const positions = new Float64Array(Module.HEAPF64.buffer, positionsPtr, 9);
     
     for (let i = 0; i < satelliteMeshes.length; i++) {
-        const pos = new THREE.Vector3(positions[i*3], positions[i*3+1], positions[i*3+2]);
+        const originalPos = new THREE.Vector3(positions[i*3], positions[i*3+1], positions[i*3+2]);
+        
+        // Calculate the orbital frame before applying globe rotation
+        const orbitalFrame = calculateOrbitalFrame(originalPos);
         
         // Apply globe rotation to satellite position
-        pos.applyEuler(globeRotation);
+        const rotatedPos = originalPos.applyEuler(globeRotation);
+        satelliteMeshes[i].position.copy(rotatedPos);
         
-        satelliteMeshes[i].position.copy(pos);
+        // Apply globe rotation to orbital frame
+        orbitalFrame.premultiply(new THREE.Matrix4().makeRotationFromEuler(globeRotation));
+        
+        // Set satellite orientation based on rotated orbital frame
+        satelliteMeshes[i].quaternion.setFromRotationMatrix(orbitalFrame);
+        
+        // Adjust rotation to ensure the "front" of the satellite faces the Earth
+        satelliteMeshes[i].rotateOnAxis(new THREE.Vector3(-1, 0, 0), Math.PI / 2);
     }
     
     Module._free(positionsPtr);
@@ -106,10 +123,11 @@ function animate() {
     requestAnimationFrame(animate);
 
     if (globeController) {
-        Module._updateSatellites(globeController, 0.016);
+        
         
         if (!isDragging) {
             // Apply default rotation when not dragging
+            Module._updateSatellites(globeController, 0.016);
             globeRotation.y += defaultRotationSpeed;
             globe.rotation.copy(globeRotation);
         }
