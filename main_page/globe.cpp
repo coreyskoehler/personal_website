@@ -17,6 +17,15 @@ public:
         x = radius * std::cos(theta);
         y = radius * std::sin(theta);
     }
+    void mouseDrag(double rotationX, double rotationY){
+        double radius = std::sqrt(x*x + y*y + z*z);
+        // rotate around x axis
+        x = x * std::cos(rotationX) - z * sin(rotationX);
+        z = x * std::sin(rotationX) + z * cos(rotationX);
+        // rotate around y axis
+        z = z * std::cos(rotationY) - y * sin(rotationY);
+        y = z * std::sin(rotationY) + y * cos(rotationX);
+    }
 };
 
 class GlobeController {
@@ -26,14 +35,20 @@ private:
 public:
     GlobeController() {
         // Add some sample satellites
-        satellites.emplace_back(7, 0, 0, 0.5);
-        satellites.emplace_back(0, 7, 0, 0.3);
-        satellites.emplace_back(0, 0, 7, 0.7);
+        satellites.emplace_back(7, 0, 0, 0.05);
+        satellites.emplace_back(0, 7, 0, 0.03);
+        satellites.emplace_back(0, 7.5, 0, 0.07);
     }
 
     void updateSatellites(double deltaTime) {
         for (auto& satellite : satellites) {
             satellite.update(deltaTime);
+        }
+    }
+
+    void mouseDragSatellites(double rotationX, double rotationY){
+        for (auto& satellite : satellites) {
+            satellite.mouseDrag(rotationX, rotationY);
         }
     }
 
@@ -61,6 +76,10 @@ extern "C" {
 
     void updateSatellites(GlobeController* controller, double deltaTime) {
         controller->updateSatellites(deltaTime);
+    }
+
+    void mouseDragSatellites(GlobeController* controller, double rotationX, double rotationY) {
+        controller->mouseDragSatellites(rotationX, rotationY);
     }
 
     void getSatellitePositions(GlobeController* controller, double* positions) {

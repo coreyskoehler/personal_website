@@ -16,8 +16,15 @@
     <div id="globe-container">
         <canvas id="globe-canvas"></canvas>
     </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/"
+          }
+        }
+      </script>
     <script src="globe.out.js"></script>
-    <script src="main.js"></script>
+    <script type ="module" src="main.js"></script>
 </body>
 </html>

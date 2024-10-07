@@ -1,3 +1,5 @@
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // Fading effect
 window.addEventListener('scroll', () => {
@@ -42,10 +44,37 @@ camera.position.z = 15;
 let globeController;
 let satelliteMeshes = [];
 
+// Test sat 3d model 
+/*
+const loader = new GLTFLoader();
+loader.load('textures/satellite.glb', (gltf) => {
+    gltf.scene.position.set(5, 5, 0);
+
+   // Change the material of the model to have a faint blue glow
+   gltf.scene.traverse((child) => {
+    if (child.isMesh) {
+        child.material = new THREE.MeshStandardMaterial({
+            color: 0x36a1d0, 
+            emissive: 0xADD8E6, 
+            emissiveIntensity: 0.3, 
+            roughness: 0.5,
+            metalness: 0.2
+        });
+    }
+});
+
+    scene.add(gltf.scene);
+    console.log('Model loaded successfully!');
+}, undefined, (error) => {
+    console.error('An error occurred while loading the model:', error);
+});
+*/
+
 Module.onRuntimeInitialized = async () => {
 
     globeController = Module._createGlobeController();
     
+    /*
     // Create satellite meshes
     const satelliteGeometry = new THREE.SphereGeometry(0.1, 16, 16);
     const satelliteMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
@@ -55,14 +84,26 @@ Module.onRuntimeInitialized = async () => {
         scene.add(satelliteMesh);
         satelliteMeshes.push(satelliteMesh);
     }
+    */
     
     // Load the satellite model using GLTFLoader
-    /*
-    const loader = new THREE.GLTFLoader();
+    
+    const loader = new GLTFLoader();
 
-    loader.load('textures/satellite.gltf', (gltf) => {
+    loader.load('textures/satellite.glb', (gltf) => {
         const satelliteModel = gltf.scene;
-
+        // Change the material of the model to have a faint blue glow
+        gltf.scene.traverse((child) => {
+            if (child.isMesh) {
+                child.material = new THREE.MeshStandardMaterial({
+                    color: 0x50c5db, 
+                    emissive: 0xADD8E6, 
+                    emissiveIntensity: 0.1, 
+                    roughness: 0.5,
+                    metalness: 0.2
+                });
+            }
+        });
         for (let i = 0; i < 3; i++) {  // Assuming 3 satellites
             const satelliteMesh = satelliteModel.clone();  // Clone the loaded satellite model
             scene.add(satelliteMesh);
@@ -71,7 +112,7 @@ Module.onRuntimeInitialized = async () => {
     }, undefined, (error) => {
         console.error('An error happened while loading the satellite model', error);
     });
-    */
+    
 };
 
 // Animation loop
@@ -79,12 +120,11 @@ function animate() {
     requestAnimationFrame(animate);
     
     if (globeController) {
-        Module._updateSatellites(globeController, 0.016);  // Assuming 60 FPS
-        
+        //Module._updateSatellites(globeController, 0.016);  // Assuming 60 FPS
+        Module._updateSatellites(globeController, 0.0);
         const positionsPtr = Module._malloc(9 * 8);  // 9 doubles (3 satellites * 3 coordinates)
         Module._getSatellitePositions(globeController, positionsPtr);
         const positions = new Float64Array(Module.HEAPF64.buffer, positionsPtr, 9);
-        
         for (let i = 0; i < satelliteMeshes.length; i++) {
             satelliteMeshes[i].position.set(positions[i*3], positions[i*3+1], positions[i*3+2]);
         }
@@ -92,7 +132,7 @@ function animate() {
         Module._free(positionsPtr);
     }
     
-    globe.rotation.y += 0.001;
+    //globe.rotation.y += 0.001;
     renderer.render(scene, camera);
 }
 animate();
@@ -108,7 +148,7 @@ window.addEventListener('resize', () => {
 let isDragging = false;
 let previousMousePosition = { x: 0, y: 0 };
 
-document.getElementById('globe-canvas').addEventListener('mousedown', (e) => {
+document.getElementById('globe-canvas'). addEventListener('mousedown', (e) => {
     isDragging = true;
 });
 
@@ -122,9 +162,21 @@ document.addEventListener('mousemove', (e) => {
             x: e.clientX - previousMousePosition.x,
             y: e.clientY - previousMousePosition.y
         };
+        console.log("deltaMove.x: ", deltaMove.x);
+        Module._mouseDragSatellites(deltaMove.x*0.01, deltaMove.y*0.01);
+
+        const positionsPtr = Module._malloc(9 * 8);  // 9 doubles (3 satellites * 3 coordinates)
+        Module._getSatellitePositions(globeController, positionsPtr);
+        const positions = new Float64Array(Module.HEAPF64.buffer, positionsPtr, 9);
+        for (let i = 0; i < satelliteMeshes.length; i++) {
+            satelliteMeshes[i].position.set(positions[i*3], positions[i*3+1], positions[i*3+2]);
+        }
+        
+        Module._free(positionsPtr);
 
         globe.rotation.y += deltaMove.x * 0.01;
         globe.rotation.x += deltaMove.y * 0.01;
+
     }
 
     previousMousePosition = {
