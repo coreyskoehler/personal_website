@@ -338,13 +338,13 @@ function getEventPosition(event) {
 function handleMove(event) {
     if (isDragging) {
         const currentPosition = getEventPosition(event);
-        console.log('Current position:', currentPosition); // Debugging line
+        //console.log('Current position:', currentPosition); // Debugging line
 
         const deltaMove = {
             x: currentPosition.x - previousPosition.x,
             y: currentPosition.y - previousPosition.y
         };
-        console.log('Delta move:', deltaMove); // Debugging line
+        //console.log('Delta move:', deltaMove); // Debugging line
 
         // Update globe rotation
         globeRotation.y += deltaMove.x * 0.01;
@@ -369,7 +369,7 @@ function handleMove(event) {
 document.addEventListener('mousedown', (e) => {
     isDragging = true;
     previousPosition = getEventPosition(e);
-    console.log('Mouse down at:', previousPosition); // Debugging line
+    //console.log('Mouse down at:', previousPosition); // Debugging line
 });
 
 document.addEventListener('mousemove', (e) => {
@@ -378,14 +378,14 @@ document.addEventListener('mousemove', (e) => {
 
 document.addEventListener('mouseup', () => {
     isDragging = false;
-    console.log('Mouse up'); // Debugging line
+    //console.log('Mouse up'); // Debugging line
 });
 
 // Touch events
 document.addEventListener('touchstart', (e) => {
     isDragging = true;
     previousPosition = getEventPosition(e);
-    console.log('Touch start at:', previousPosition); // Debugging line
+    //console.log('Touch start at:', previousPosition); // Debugging line
 });
 
 document.addEventListener('touchmove', (e) => {
@@ -395,11 +395,9 @@ document.addEventListener('touchmove', (e) => {
 
 document.addEventListener('touchend', () => {
     isDragging = false;
-    console.log('Touch end'); // Debugging line
+    //console.log('Touch end'); // Debugging line
 });
 
-// Debugging: Log when script is loaded
-console.log('Drag script loaded');
 
 // Clean up when the page is unloaded
 window.addEventListener('unload', () => {
