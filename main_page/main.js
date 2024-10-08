@@ -61,6 +61,7 @@ let isAnimationStarted = false;
   initializeApp();
 
 // Fading effect
+/*
 window.addEventListener('scroll', () => {
     const header = document.getElementById('header');
     const scrollPosition = window.scrollY;
@@ -73,7 +74,7 @@ window.addEventListener('scroll', () => {
         header.style.opacity = 0;
     }
 });
-
+*/
 
 // Set up Three.js scene
 const scene = new THREE.Scene();
@@ -320,18 +321,30 @@ document.getElementById('globe-canvas'). addEventListener('mousedown', (e) => {
     isDragging = true;
 });
 
-document.addEventListener('mouseup', () => {
-    isDragging = false;
-});
+//let isDragging = false;
 let hasInteracted = false;
+let previousPosition = { x: 0, y: 0 };
 
-document.addEventListener('mousemove', (e) => {
+// Helper function to get position from either mouse or touch event
+function getEventPosition(event) {
+    if (event.touches && event.touches.length > 0) {
+        return { x: event.touches[0].clientX, y: event.touches[0].clientY };
+    } else {
+        return { x: event.clientX, y: event.clientY };
+    }
+}
+
+// Function to handle both mouse and touch move events
+function handleMove(event) {
     if (isDragging) {
-        
+        const currentPosition = getEventPosition(event);
+        console.log('Current position:', currentPosition); // Debugging line
+
         const deltaMove = {
-            x: e.clientX - previousMousePosition.x,
-            y: e.clientY - previousMousePosition.y
+            x: currentPosition.x - previousPosition.x,
+            y: currentPosition.y - previousPosition.y
         };
+        console.log('Delta move:', deltaMove); // Debugging line
 
         // Update globe rotation
         globeRotation.y += deltaMove.x * 0.01;
@@ -342,18 +355,51 @@ document.addEventListener('mousemove', (e) => {
 
         // Update satellite positions
         updateSatellitePositions();
+
         if (!hasInteracted) {
             defaultRotationSpeed = 0.00005;
             hasInteracted = true;
         }
-    }
 
-    previousMousePosition = {
-        x: e.clientX,
-        y: e.clientY
-    };
+        previousPosition = currentPosition;
+    }
+}
+
+// Mouse events
+document.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    previousPosition = getEventPosition(e);
+    console.log('Mouse down at:', previousPosition); // Debugging line
 });
 
+document.addEventListener('mousemove', (e) => {
+    handleMove(e);
+});
+
+document.addEventListener('mouseup', () => {
+    isDragging = false;
+    console.log('Mouse up'); // Debugging line
+});
+
+// Touch events
+document.addEventListener('touchstart', (e) => {
+    isDragging = true;
+    previousPosition = getEventPosition(e);
+    console.log('Touch start at:', previousPosition); // Debugging line
+});
+
+document.addEventListener('touchmove', (e) => {
+    e.preventDefault(); // Prevent scrolling while dragging
+    handleMove(e);
+});
+
+document.addEventListener('touchend', () => {
+    isDragging = false;
+    console.log('Touch end'); // Debugging line
+});
+
+// Debugging: Log when script is loaded
+console.log('Drag script loaded');
 
 // Clean up when the page is unloaded
 window.addEventListener('unload', () => {
