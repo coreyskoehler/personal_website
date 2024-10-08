@@ -52,11 +52,12 @@ class GlobeController {
 private:
     std::vector<Satellite> satellites;
     std::unordered_map<char, std::vector<std::vector<double>>> letterPositions;
+    std::vector<std::pair<int, int>> words;
 
     void initializeLetterPositions() {
         // Define letter shapes (simplified for this example)
         //letterPositions['R'] = {{0,0}, {0,0.0872665}, {0,2*0.0872665}, {1*0.0872665,2*0.0872665}, {2*0.0872665,1*0.0872665}, {0.0872665,0.0872665}, {2*0.0872665,0}};
-        letterPositions['R'] = {{0, 0, 0}, {0.03,0.03, M_PI/2}};
+        letterPositions['R'] = {{0, 0, 0}, {0.015,0.03, 4*M_PI/10}};
         letterPositions['E'] = {{0, 0, 0}, {0.03,0.03, M_PI/2}, {0.01, 0.03, 4*M_PI/6}, {-0.03, 0.03, M_PI/2}};
         letterPositions['S'] = {{0.03,0.03, M_PI/2}, {0.0,0.03, M_PI/4},  {-0.03, 0.03, M_PI/2}};
         letterPositions['U'] = {{0, 0, 0}, {0.0,0.06, 0},  {-0.03, 0.03, M_PI/2}};
@@ -76,11 +77,12 @@ public:
         satellites.clear();
         double angleStep = 0.085;
         double currentAngle = 0;
-
+        int sizePrev = satellites.size();
+        int sizeNow = sizePrev;
         for (char c : text) {
             if (letterPositions.find(std::toupper(c)) != letterPositions.end()) {
                 int pointCount = letterPositions[std::toupper(c)].size();
-                double pointAngleStep = 5 * M_PI / 180.0; // 5 degrees in radians
+                //double pointAngleStep = 5 * M_PI / 180.0; // 5 degrees in radians
 
                 for (int i = 0; i < pointCount; ++i) {
                     const auto& pos = letterPositions[std::toupper(c)][i];
@@ -93,9 +95,11 @@ public:
 
                     satellites.emplace_back(x, y, z, 0.00, c, pos[2]);
                 }
+                sizeNow += pointCount;
             }
             currentAngle += angleStep;
         }
+        words.push_back({sizePrev, sizeNow});
         LOG(("Created " + std::to_string(satellites.size()) + " satellites").c_str());
     }
 

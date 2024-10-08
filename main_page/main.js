@@ -38,7 +38,7 @@ scene.add(ambientLight);
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
 directionalLight.position.set(5, 3, 5);
 scene.add(directionalLight);
-const sunLight1 = new THREE.DirectionalLight(0xfab157, 3.0);
+const sunLight1 = new THREE.DirectionalLight(0xfab157, 2.0);
 sunLight1.position.set(10, 0, -10);
 const sunLight2 = new THREE.DirectionalLight(0xfab157, 0.75);
 sunLight2.position.set(10, 3, -10);
@@ -147,7 +147,7 @@ function createSatelliteMeshes(satelliteModel) {
 
 
 let globeRotation = new THREE.Euler(0, 0, 0, 'XYZ');
-const defaultRotationSpeed = 0.0001; 
+let defaultRotationSpeed = 0.001; 
 // Interaction
 let isDragging = false;
 let previousMousePosition = { x: 0, y: 0 };
@@ -274,9 +274,11 @@ document.getElementById('globe-canvas'). addEventListener('mousedown', (e) => {
 document.addEventListener('mouseup', () => {
     isDragging = false;
 });
+let hasInteracted = false;
 
 document.addEventListener('mousemove', (e) => {
     if (isDragging) {
+        
         const deltaMove = {
             x: e.clientX - previousMousePosition.x,
             y: e.clientY - previousMousePosition.y
@@ -291,6 +293,10 @@ document.addEventListener('mousemove', (e) => {
 
         // Update satellite positions
         updateSatellitePositions();
+        if (!hasInteracted) {
+            defaultRotationSpeed = 0.00005;
+            hasInteracted = true;
+        }
     }
 
     previousMousePosition = {
