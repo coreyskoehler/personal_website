@@ -2,6 +2,64 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 const DEBUG = true;
 
+let isModuleReady = false;
+let isAnimationStarted = false;
+
+  function waitForModule() {
+    return new Promise((resolve) => {
+      if (Module.calledRun) {
+        resolve();
+      } else {
+        Module.onRuntimeInitialized = resolve;
+      }
+    });
+  }
+  
+  async function initializeApp() {
+    await waitForModule();
+    
+    // Your initialization code goes here
+    console.log("Module is ready");
+    if (DEBUG) console.log("WebAssembly module initialized");
+    initializeGlobeController();
+    isModuleReady = true;
+    
+    // Load the satellite model using GLTFLoader
+    const loader = new GLTFLoader();
+    loader.load('textures/compressed_sat.glb', 
+        (gltf) => {
+            if (DEBUG) console.log("Satellite model loaded successfully");
+            const satelliteModel = gltf.scene;
+            
+            // Change the material of the model to have a faint blue glow
+            satelliteModel.traverse((child) => {
+                if (child.isMesh) {
+                    child.material = new THREE.MeshStandardMaterial({
+                        color: 0x27636e
+                    });
+                }
+            });
+            satelliteModel.scale.set(0.6, 0.6, 0.6);
+            createSatelliteMeshes(satelliteModel);
+            
+            // Start the animation only after everything is loaded
+            if (!isAnimationStarted) {
+                isAnimationStarted = true;
+                animate();
+            }
+        },
+        (progress) => {
+            if (DEBUG) console.log(`Loading satellite model: ${(progress.loaded / progress.total * 100).toFixed(2)}%`);
+        },
+        (error) => {
+            console.error('Error loading satellite model:', error);
+        }
+    );
+    console.log("Initialization complete, app is ready");
+  }
+  
+  initializeApp();
+
 // Fading effect
 window.addEventListener('scroll', () => {
     const header = document.getElementById('header');
@@ -15,6 +73,7 @@ window.addEventListener('scroll', () => {
         header.style.opacity = 0;
     }
 });
+
 
 // Set up Three.js scene
 const scene = new THREE.Scene();
@@ -49,6 +108,7 @@ camera.position.set(0, 0, 15);
 // WebAssembly integration
 let globeController;
 let satelliteMeshes = [];
+
 
 function checkModuleLoaded() {
     if (Module && Module.cwrap) {
@@ -89,42 +149,9 @@ function initializeGlobeController() {
     }
 }
 
-Module.onRuntimeInitialized = async () => {
-    if (DEBUG) console.log("WebAssembly module initialized");
-    initializeGlobeController();
-    
-    // Load the satellite model using GLTFLoader
-    const loader = new GLTFLoader();
-    loader.load('textures/compressed_sat.glb', 
-        (gltf) => {
-            if (DEBUG) console.log("Satellite model loaded successfully");
-            const satelliteModel = gltf.scene;
-            
-            // Change the material of the model to have a faint blue glow
-            satelliteModel.traverse((child) => {
-                if (child.isMesh) {
-                    child.material = new THREE.MeshStandardMaterial({
-                        //color: 0x50c5db, 
-                        color: 0x27636e
-                        //emissive: 0xADD8E6, 
-                        //emissiveIntensity: 0.1, 
-                        //roughness: 0.5,
-                        //metalness: 0.2
-                    });
-                }
-            });
-            satelliteModel.scale.set(0.6, 0.6, 0.6);
-            // Create satellite meshes
-            createSatelliteMeshes(satelliteModel);
-        },
-        (progress) => {
-            if (DEBUG) console.log(`Loading satellite model: ${(progress.loaded / progress.total * 100).toFixed(2)}%`);
-        },
-        (error) => {
-            console.error('Error loading satellite model:', error);
-        }
-    );
-};
+
+
+
 
 function createSatelliteMeshes(satelliteModel) {
     if (!globeController) {
@@ -229,15 +256,11 @@ function createTextSprite(text) {
     sprite.scale.set(0.5, 0.5, 1);
     return sprite;
 }
-
-
 function animate() {
     requestAnimationFrame(animate);
 
     if (globeController) {
         try {
-            
-            
             if (!isDragging) {
                 const updateSatellites = Module.cwrap('updateSatellites', null, ['number', 'number']);
                 updateSatellites(globeController, 0.016);
@@ -255,7 +278,8 @@ function animate() {
     
     renderer.render(scene, camera);
 }
-animate();
+
+
 if (DEBUG) console.log("main.js loaded");
 
 // Handle window resizing
