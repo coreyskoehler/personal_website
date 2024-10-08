@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const DEBUG = true;
 
 // Fading effect
 window.addEventListener('scroll', () => {
@@ -37,48 +38,116 @@ scene.add(ambientLight);
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
 directionalLight.position.set(5, 3, 5);
 scene.add(directionalLight);
-
-camera.position.z = 15;
+const sunLight1 = new THREE.DirectionalLight(0xfab157, 3.0);
+sunLight1.position.set(10, 0, -10);
+const sunLight2 = new THREE.DirectionalLight(0xfab157, 0.75);
+sunLight2.position.set(10, 3, -10);
+scene.add(sunLight1);
+scene.add(sunLight2);
+camera.position.set(0, 0, 15);
 
 // WebAssembly integration
 let globeController;
 let satelliteMeshes = [];
 
-Module.onRuntimeInitialized = async () => {
+function checkModuleLoaded() {
+    if (Module && Module.cwrap) {
+        if (DEBUG) console.log("Module loaded successfully");
+        return true;
+    }
+    console.warn("Module not loaded yet");
+    return false;
+}
+// Wrap the initialization in a function
+function initializeGlobeController() {
+    if (!checkModuleLoaded()) {
+        console.error("Cannot initialize GlobeController: Module not loaded");
+        return;
+    }
 
-    globeController = Module._createGlobeController();
+    try {
+        if (DEBUG) console.log("Attempting to create GlobeController");
+        const createGlobeController = Module.cwrap('createGlobeController', 'number', []);
+        globeController = createGlobeController();
+        
+        if (globeController) {
+            if (DEBUG) console.log("GlobeController created successfully, pointer:", globeController);
+            
+            // Test the creation of satellites
+            const createSatellitesFromString = Module.cwrap('createSatellitesFromString', null, ['number', 'string']);
+            createSatellitesFromString(globeController, "RESUME");
+            
+            if (DEBUG) console.log("Satellites created, getting count");
+            const getSatelliteCount = Module.cwrap('getSatelliteCount', 'number', ['number']);
+            const count = getSatelliteCount(globeController);
+            if (DEBUG) console.log("Number of satellites:", count);
+        } else {
+            console.error("Failed to create GlobeController");
+        }
+    } catch (error) {
+        console.error("Error during GlobeController initialization:", error);
+    }
+}
+
+Module.onRuntimeInitialized = async () => {
+    if (DEBUG) console.log("WebAssembly module initialized");
+    initializeGlobeController();
     
     // Load the satellite model using GLTFLoader
-    
     const loader = new GLTFLoader();
-
-    loader.load('textures/satellite.glb', (gltf) => {
-        const satelliteModel = gltf.scene;
-        // Change the material of the model to have a faint blue glow
-        gltf.scene.traverse((child) => {
-            if (child.isMesh) {
-                child.material = new THREE.MeshStandardMaterial({
-                    color: 0x50c5db, 
-                    emissive: 0xADD8E6, 
-                    emissiveIntensity: 0.1, 
-                    roughness: 0.5,
-                    metalness: 0.2
-                });
-            }
-        });
-        for (let i = 0; i < 3; i++) {  // Assuming 3 satellites
-            const satelliteMesh = satelliteModel.clone();  // Clone the loaded satellite model
-            scene.add(satelliteMesh);
-            satelliteMeshes.push(satelliteMesh);
+    loader.load('textures/compressed_sat.glb', 
+        (gltf) => {
+            if (DEBUG) console.log("Satellite model loaded successfully");
+            const satelliteModel = gltf.scene;
+            
+            // Change the material of the model to have a faint blue glow
+            satelliteModel.traverse((child) => {
+                if (child.isMesh) {
+                    child.material = new THREE.MeshStandardMaterial({
+                        //color: 0x50c5db, 
+                        color: 0x27636e
+                        //emissive: 0xADD8E6, 
+                        //emissiveIntensity: 0.1, 
+                        //roughness: 0.5,
+                        //metalness: 0.2
+                    });
+                }
+            });
+            satelliteModel.scale.set(0.6, 0.6, 0.6);
+            // Create satellite meshes
+            createSatelliteMeshes(satelliteModel);
+        },
+        (progress) => {
+            if (DEBUG) console.log(`Loading satellite model: ${(progress.loaded / progress.total * 100).toFixed(2)}%`);
+        },
+        (error) => {
+            console.error('Error loading satellite model:', error);
         }
-    }, undefined, (error) => {
-        console.error('An error happened while loading the satellite model', error);
-    });
-    
+    );
 };
 
+function createSatelliteMeshes(satelliteModel) {
+    if (!globeController) {
+        console.error("Cannot create satellite meshes: GlobeController not initialized");
+        return;
+    }
+
+    const getSatelliteCount = Module.cwrap('getSatelliteCount', 'number', ['number']);
+    const satelliteCount = getSatelliteCount(globeController);
+    if (DEBUG) console.log(`Creating ${satelliteCount} satellite meshes`);
+
+    for (let i = 0; i < satelliteCount; i++) {
+        const satelliteMesh = satelliteModel.clone();
+        scene.add(satelliteMesh);
+        satelliteMeshes.push(satelliteMesh);
+    }
+    if (DEBUG) console.log(`${satelliteMeshes.length} satellite meshes created`);
+}
+
+
+
 let globeRotation = new THREE.Euler(0, 0, 0, 'XYZ');
-const defaultRotationSpeed = 0.001; 
+const defaultRotationSpeed = 0.0001; 
 // Interaction
 let isDragging = false;
 let previousMousePosition = { x: 0, y: 0 };
@@ -90,13 +159,33 @@ function calculateOrbitalFrame(position) {
     
     return new THREE.Matrix4().makeBasis(tangentialVector, normalVector, radialVector);
 }
-
 function updateSatellitePositions() {
-    const positionsPtr = Module._malloc(9 * 8);  // 9 doubles (3 satellites * 3 coordinates)
-    Module._getSatellitePositions(globeController, positionsPtr);
-    const positions = new Float64Array(Module.HEAPF64.buffer, positionsPtr, 9);
+    if (!globeController) {
+        console.warn("GlobeController not initialized");
+        return;
+    }
+
+    const satelliteCount = Module._getSatelliteCount(globeController);
+    if (satelliteCount === 0) {
+        console.warn("No satellites to update");
+        return;
+    }
+
+    const positionsPtr = Module._malloc(satelliteCount * 3 * 8);  // 3 doubles per satellite
+    const rotationsPtr = Module._malloc(satelliteCount * 8);  // 1 double per satellite for rotation
     
-    for (let i = 0; i < satelliteMeshes.length; i++) {
+    Module._getSatellitePositions(globeController, positionsPtr);
+    Module._getSatelliteRotations(globeController, rotationsPtr);
+    
+    const positions = new Float64Array(Module.HEAPF64.buffer, positionsPtr, satelliteCount * 3);
+    const rotations = new Float64Array(Module.HEAPF64.buffer, rotationsPtr, satelliteCount);
+    
+    for (let i = 0; i < satelliteCount; i++) {
+        if (!satelliteMeshes[i]) {
+            console.warn(`Satellite mesh ${i} not found`);
+            continue;
+        }
+
         const originalPos = new THREE.Vector3(positions[i*3], positions[i*3+1], positions[i*3+2]);
         
         // Calculate the orbital frame before applying globe rotation
@@ -114,30 +203,60 @@ function updateSatellitePositions() {
         
         // Adjust rotation to ensure the "front" of the satellite faces the Earth
         satelliteMeshes[i].rotateOnAxis(new THREE.Vector3(-1, 0, 0), Math.PI / 2);
+
+        // Apply individual satellite rotation
+        const rotationAxis = rotatedPos.clone().normalize();
+        const rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(rotationAxis, rotations[i]);
+        satelliteMeshes[i].quaternion.premultiply(rotationQuaternion);
     }
     
     Module._free(positionsPtr);
+    Module._free(rotationsPtr);
 }
+
+function createTextSprite(text) {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    context.font = 'Bold 60px Arial';
+    context.fillStyle = 'rgba(255,255,255,1)';
+    context.fillText(text, 0, 60);
+    
+    const texture = new THREE.Texture(canvas);
+    texture.needsUpdate = true;
+    
+    const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+    const sprite = new THREE.Sprite(spriteMaterial);
+    sprite.scale.set(0.5, 0.5, 1);
+    return sprite;
+}
+
 
 function animate() {
     requestAnimationFrame(animate);
 
     if (globeController) {
-        
-        
-        if (!isDragging) {
-            // Apply default rotation when not dragging
-            Module._updateSatellites(globeController, 0.016);
-            globeRotation.y += defaultRotationSpeed;
-            globe.rotation.copy(globeRotation);
+        try {
+            
+            
+            if (!isDragging) {
+                const updateSatellites = Module.cwrap('updateSatellites', null, ['number', 'number']);
+                updateSatellites(globeController, 0.016);
+                globeRotation.y += defaultRotationSpeed;
+                globe.rotation.copy(globeRotation);
+            }
+            
+            updateSatellitePositions();
+        } catch (error) {
+            console.error("Error in animate function:", error);
         }
-        
-        updateSatellitePositions();
+    } else {
+        console.warn("GlobeController not initialized in animate function");
     }
     
     renderer.render(scene, camera);
 }
 animate();
+if (DEBUG) console.log("main.js loaded");
 
 // Handle window resizing
 window.addEventListener('resize', () => {
