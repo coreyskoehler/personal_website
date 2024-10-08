@@ -57,7 +57,7 @@ let isAnimationStarted = false;
     );
     console.log("Initialization complete, app is ready");
   }
-  
+
   initializeApp();
 
 // Fading effect
@@ -90,6 +90,23 @@ const globeMaterial = new THREE.MeshPhongMaterial({
 });
 const globe = new THREE.Mesh(globeGeometry, globeMaterial);
 scene.add(globe);
+
+// Create moon geometry
+const moonGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+const moonMaterial = new THREE.MeshPhongMaterial({
+    map: new THREE.TextureLoader().load('textures/moon_map2_color.jpg'),
+    bumpMap: new THREE.TextureLoader().load('textures/moon_map2.jpg'),
+    bumpScale: 0.1,
+});
+const moon = new THREE.Mesh(moonGeometry, moonMaterial);
+
+// Position the moon relative to the globe
+//moon.position.set(-1.5, 1.0, 12); // Adjust these values as needed
+moon.rotation.y += 2.5;
+moon.rotation.x += 0.5;
+// Add the moon to the scene
+scene.add(moon);
+
 
 // Add lighting
 const ambientLight = new THREE.AmbientLight(0x404040);
@@ -256,6 +273,10 @@ function createTextSprite(text) {
     sprite.scale.set(0.5, 0.5, 1);
     return sprite;
 }
+let moonOrbitRadius = 9; // Distance from Earth's center
+let moonOrbitSpeed = defaultRotationSpeed; // Speed of orbit
+let moonAngle = -2; // Current angle of the moon's orbit
+
 function animate() {
     requestAnimationFrame(animate);
 
@@ -267,7 +288,11 @@ function animate() {
                 globeRotation.y += defaultRotationSpeed;
                 globe.rotation.copy(globeRotation);
             }
-            
+            // Update moon's position
+            moonAngle += moonOrbitSpeed;
+            moon.position.x = Math.sin(moonAngle) * moonOrbitRadius;
+            moon.position.z = Math.cos(moonAngle) * moonOrbitRadius;
+            moon.position.y = Math.cos(moonAngle) * 2
             updateSatellitePositions();
         } catch (error) {
             console.error("Error in animate function:", error);
