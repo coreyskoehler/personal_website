@@ -391,7 +391,7 @@ document.addEventListener('touchstart', (e) => {
 document.addEventListener('touchmove', (e) => {
     e.preventDefault(); // Prevent scrolling while dragging
     handleMove(e);
-});
+}, {passive:false});
 
 document.addEventListener('touchend', () => {
     isDragging = false;
