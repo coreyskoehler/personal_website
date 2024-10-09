@@ -1,7 +1,7 @@
 # Personal Website with Interactive 3D Globe
 
 This project creates a personal website featuring an interactive 3D globe using Three.js and WebAssembly. The globe displays rotating satellite markers that link to different pages or external sites.
-See the final product: www.coreyskoehler.com
+See the final product: https://coreyskoehler.com/)
 ## Structure
 
 ```
