@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-const DEBUG = true;
+const DEBUG = false;
 
 let isAnimationStarted = false;
 
@@ -141,7 +141,7 @@ function initializeGlobeController() {
 
             // Test the creation of satellites
             const createSatellitesFromString = Module.cwrap('createSatellitesFromString', null, ['number', 'string', 'number', 'number', 'string', 'number']);
-            createSatellitesFromString(globeController, "RESUME", 0.0, -1, "../resume/index.html", 0.005);
+            createSatellitesFromString(globeController, "RESUME", 0.0, -1, "resume/index.html", 0.005);
 
             createSatellitesFromString(globeController, "LINKEDIN", -0.2, 0.5, "https://www.linkedin.com/in/coreyskoehler/", 0.007);
             createSatellitesFromString(globeController, "GITHUB", 0.0, 3, "https://github.com/coreyskoehler", 0.003);
