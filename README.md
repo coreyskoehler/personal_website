@@ -14,7 +14,7 @@ personal_website/
 ├── [compiled WASM files]
 └── resume/
     └── index.html
-
+```
 ## Key Features
 
 - Interactive 3D Earth globe with orbiting satellites
