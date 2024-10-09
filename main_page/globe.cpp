@@ -57,11 +57,11 @@ private:
     void initializeLetterPositions() {
         // Define letter shapes (simplified for this example)
         //letterPositions['R'] = {{0,0}, {0,0.0872665}, {0,2*0.0872665}, {1*0.0872665,2*0.0872665}, {2*0.0872665,1*0.0872665}, {0.0872665,0.0872665}, {2*0.0872665,0}};
-        letterPositions['R'] = {{0, 0, 0}, {0.015,0.03, 4*M_PI/10}};
-        letterPositions['E'] = {{0, 0, 0}, {0.03,0.03, M_PI/2}, {0.01, 0.03, 4*M_PI/6}, {-0.03, 0.03, M_PI/2}};
-        letterPositions['S'] = {{0.03,0.03, M_PI/2}, {0.0,0.03, M_PI/4},  {-0.03, 0.03, M_PI/2}};
-        letterPositions['U'] = {{0, 0, 0}, {0.0,0.06, 0},  {-0.03, 0.03, M_PI/2}};
-        letterPositions['M'] = {{0, 0, 0}, {0.0,0.015, M_PI/6}, {0.0,0.045, 5*M_PI/6},  {0, 0.06, 0},};
+        letterPositions['R'] = {{0, 0, 0, 1}, {0.015,0.005, 4*M_PI/10, 0.95}};
+        letterPositions['E'] = {{0, 0, 0, 1}, {0.03,0.03, M_PI/2, 0.99}, {0.005, 0.03, M_PI/2, 0.97}, {-0.03, 0.03, M_PI/2, 0.98}};
+        letterPositions['S'] = {{0.03, 0.03, M_PI/2, 1}, {0.0,0.03, M_PI/(4.2), 0.95},  {-0.03, 0.03, M_PI/2, 0.97}};
+        letterPositions['U'] = {{0, 0, 0, 1}, {0.0, 0.06, 0, 0.98},  {-0.03, 0.03, M_PI/2, 0.95}};
+        letterPositions['M'] = {{0, 0, 0, 1}, {0.0, 0.025, M_PI/6, 0.95}, {0.0, 0.045, 5*M_PI/6, 0.96},  {0, 0.06, 0, 1}};
         // Add more letters as needed
          LOG("Letter positions initialized");
     }
@@ -72,32 +72,43 @@ public:
         LOG("GlobeController constructed");
     }
 
-    void createSatellitesFromString(const std::string& text, double baseRadius = 7.0, double letterSpacing = 0.5) {
+    void createSatellitesFromString(const std::string& text, double startPhi, double startTheta, double baseRadius = 7.0, double letterSpacing = 0.5) {
         LOG(("Creating satellites for text: " + text).c_str());
-        satellites.clear();
+        //satellites.clear();
         double angleStep = 0.085;
-        double currentAngle = 0;
+        double currentTheta = startTheta;
         int sizePrev = satellites.size();
         int sizeNow = sizePrev;
+        
         for (char c : text) {
             if (letterPositions.find(std::toupper(c)) != letterPositions.end()) {
                 int pointCount = letterPositions[std::toupper(c)].size();
-                //double pointAngleStep = 5 * M_PI / 180.0; // 5 degrees in radians
 
                 for (int i = 0; i < pointCount; ++i) {
                     const auto& pos = letterPositions[std::toupper(c)][i];
-                    double pointAngle = pos[1] + currentAngle;
+                    double localPhi = pos[0];     // Vertical offset within the letter
+                    double localTheta = pos[1];   // Horizontal offset within the letter
+                    
+                    // Calculate phi and theta
+                    double phi = startPhi + localPhi;
+                    double theta = currentTheta - localTheta;
+                    
+                    // Convert to Cartesian coordinates
+                    double x = baseRadius * std::cos(theta) * std::cos(phi);
+                    double y = baseRadius * std::sin(phi);
+                    double z = baseRadius * std::sin(theta) * std::cos(phi);
 
-                    // Calculate position on the sphere
-                    double x = baseRadius * std::cos(pos[0]) * std::cos(pointAngle);
-                    double y = baseRadius * std::sin(pos[0]);
-                    double z = -baseRadius * std::cos(pos[0]) * std::sin(pointAngle);
+                    // Apply scaling factor
+                    double scale = pos[3];
+                    x *= scale;
+                    y *= scale;
+                    z *= scale;
 
-                    satellites.emplace_back(x, y, z, 0.00, c, pos[2]);
+                    satellites.emplace_back(x, y, z, 0.0, c, pos[2]);
                 }
                 sizeNow += pointCount;
             }
-            currentAngle += angleStep;
+            currentTheta -= angleStep;
         }
         words.push_back({sizePrev, sizeNow});
         LOG(("Created " + std::to_string(satellites.size()) + " satellites").c_str());
@@ -165,9 +176,9 @@ extern "C" {
         delete controller;
     }
 
-    void createSatellitesFromString(GlobeController* controller, const char* text) {
+    void createSatellitesFromString(GlobeController* controller, const char* text, double startPhi, double startTheta) {
         LOG(("Creating satellites from string: " + std::string(text)).c_str());
-        controller->createSatellitesFromString(std::string(text));
+        controller->createSatellitesFromString(std::string(text), startPhi, startTheta);
     }
 
     void updateSatellites(GlobeController* controller, double deltaTime) {

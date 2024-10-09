@@ -5,7 +5,7 @@ const DEBUG = true;
 let isModuleReady = false;
 let isAnimationStarted = false;
 
-  function waitForModule() {
+function waitForModule() {
     return new Promise((resolve) => {
       if (Module.calledRun) {
         resolve();
@@ -13,9 +13,9 @@ let isAnimationStarted = false;
         Module.onRuntimeInitialized = resolve;
       }
     });
-  }
+}
   
-  async function initializeApp() {
+async function initializeApp() {
     await waitForModule();
     
     // Your initialization code goes here
@@ -23,10 +23,10 @@ let isAnimationStarted = false;
     if (DEBUG) console.log("WebAssembly module initialized");
     initializeGlobeController();
     isModuleReady = true;
-    
+
     // Load the satellite model using GLTFLoader
     const loader = new GLTFLoader();
-    loader.load('textures/compressed_sat.glb', 
+    loader.load('textures/super_dishless_sat-opt.glb', 
         (gltf) => {
             if (DEBUG) console.log("Satellite model loaded successfully");
             const satelliteModel = gltf.scene;
@@ -34,8 +34,11 @@ let isAnimationStarted = false;
             // Change the material of the model to have a faint blue glow
             satelliteModel.traverse((child) => {
                 if (child.isMesh) {
-                    child.material = new THREE.MeshStandardMaterial({
-                        color: 0x27636e
+                    child.material = new THREE.MeshPhongMaterial({
+                        color: 0x27636e,
+                        emissive: 0x27636e,
+                        emissiveIntensity: 0,
+                        shininess: 30
                     });
                 }
             });
@@ -56,25 +59,9 @@ let isAnimationStarted = false;
         }
     );
     console.log("Initialization complete, app is ready");
-  }
+}
 
-  initializeApp();
-
-// Fading effect
-/*
-window.addEventListener('scroll', () => {
-    const header = document.getElementById('header');
-    const scrollPosition = window.scrollY;
-    const maxScroll = 500; // Adjust this value to control when the header fully fades out
-
-    if (scrollPosition <= maxScroll) {
-        const opacity = 1 - (scrollPosition / maxScroll);
-        header.style.opacity = opacity;
-    } else {
-        header.style.opacity = 0;
-    }
-});
-*/
+initializeApp();
 
 // Set up Three.js scene
 const scene = new THREE.Scene();
@@ -97,7 +84,7 @@ const moonGeometry = new THREE.SphereGeometry(0.5, 32, 32);
 const moonMaterial = new THREE.MeshPhongMaterial({
     map: new THREE.TextureLoader().load('textures/moon_map2_color.jpg'),
     bumpMap: new THREE.TextureLoader().load('textures/moon_map2.jpg'),
-    bumpScale: 0.1,
+    bumpScale: 0.03,
 });
 const moon = new THREE.Mesh(moonGeometry, moonMaterial);
 
@@ -122,6 +109,9 @@ sunLight2.position.set(10, 3, -10);
 scene.add(sunLight1);
 scene.add(sunLight2);
 camera.position.set(0, 0, 15);
+
+
+
 
 // WebAssembly integration
 let globeController;
@@ -152,9 +142,15 @@ function initializeGlobeController() {
             if (DEBUG) console.log("GlobeController created successfully, pointer:", globeController);
             
             // Test the creation of satellites
-            const createSatellitesFromString = Module.cwrap('createSatellitesFromString', null, ['number', 'string']);
-            createSatellitesFromString(globeController, "RESUME");
-            
+            const createSatellitesFromString = Module.cwrap('createSatellitesFromString', null, ['number', 'string', 'number', 'number']);
+            createSatellitesFromString(globeController, "RESUME", 0, 0);
+
+            createSatellitesFromString(globeController, "SEE", 0, 1);
+
+            createSatellitesFromString(globeController, "SEE", 0, 2);
+            createSatellitesFromString(globeController, "SEE", 0, 3);
+            createSatellitesFromString(globeController, "SEE", 0, 4);
+
             if (DEBUG) console.log("Satellites created, getting count");
             const getSatelliteCount = Module.cwrap('getSatelliteCount', 'number', ['number']);
             const count = getSatelliteCount(globeController);
@@ -166,7 +162,6 @@ function initializeGlobeController() {
         console.error("Error during GlobeController initialization:", error);
     }
 }
-
 
 
 
@@ -193,6 +188,7 @@ function createSatelliteMeshes(satelliteModel) {
 
 let globeRotation = new THREE.Euler(0, 0, 0, 'XYZ');
 let defaultRotationSpeed = 0.001; 
+//let defaultRotationSpeed = 0.0;
 // Interaction
 let isDragging = false;
 let previousMousePosition = { x: 0, y: 0 };
@@ -253,11 +249,53 @@ function updateSatellitePositions() {
         const rotationAxis = rotatedPos.clone().normalize();
         const rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(rotationAxis, rotations[i]);
         satelliteMeshes[i].quaternion.premultiply(rotationQuaternion);
+
+        // Calculate visibility based on position
+        const visibilityFactor = calculateVisibilityFactor(rotatedPos);
+        
+        // Apply visibility factor to satellite material
+        satelliteMeshes[i].traverse((child) => {
+            if (child.isMesh) {
+                if (!child.material.originalColor) {
+                    child.material.originalColor = child.material.color.clone();
+                }
+                const brightColor = child.material.originalColor.clone().multiplyScalar(1 + visibilityFactor);
+                child.material.color.copy(brightColor);
+                //if visibilityFactor > 0
+                child.material.emissiveIntensity = visibilityFactor;
+            }
+        });
+
+
     }
     
     Module._free(positionsPtr);
     Module._free(rotationsPtr);
 }
+
+function calculateVisibilityFactor(position) {
+    // Normalize the position
+    const normalizedPos = position.clone();
+    //const pos = position.clone();
+    // Calculate how much the satellite is facing the camera
+    // 1 means directly facing, 0 means perpendicular, -1 means facing away
+    const facingFactor = normalizedPos.z;
+    
+    // Calculate distance from the (0, 0) point in the xy-plane
+    const xyDistance = Math.sqrt((normalizedPos.x-1.5) * (normalizedPos.x-1.5) + normalizedPos.y * normalizedPos.y);
+    
+    // Combine these factors
+    // We want high visibility when z is positive (facing camera) and xy distance is small (near center)
+    let visibilityFactor = 0.0;
+    if (facingFactor > 0){
+        visibilityFactor = (2.0 - xyDistance);
+    }
+    // Clamp the value between 0 and 1, and apply a power to enhance the effect
+    visibilityFactor = Math.pow(Math.max(0, Math.min(1, visibilityFactor)), 2);
+
+    return visibilityFactor;
+}
+
 
 function createTextSprite(text) {
     const canvas = document.createElement('canvas');
@@ -275,8 +313,8 @@ function createTextSprite(text) {
     return sprite;
 }
 let moonOrbitRadius = 9; // Distance from Earth's center
-let moonOrbitSpeed = defaultRotationSpeed; // Speed of orbit
-let moonAngle = -2; // Current angle of the moon's orbit
+let moonOrbitSpeed = defaultRotationSpeed/2; // Speed of orbit
+let moonAngle = -0.75; // Current angle of the moon's orbit
 
 function animate() {
     requestAnimationFrame(animate);
@@ -358,6 +396,7 @@ function handleMove(event) {
 
         if (!hasInteracted) {
             defaultRotationSpeed = 0.00005;
+            //defaultRotationSpeed = 0.0;
             hasInteracted = true;
         }
 
