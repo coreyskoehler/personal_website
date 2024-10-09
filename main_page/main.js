@@ -176,11 +176,28 @@ function createSatelliteMeshes(satelliteModel) {
     const satelliteCount = getSatelliteCount(globeController);
     if (DEBUG) console.log(`Creating ${satelliteCount} satellite meshes`);
 
+    function cloneModelWithNewMaterials(originalModel) {
+        const clone = originalModel.clone();
+
+        clone.traverse((node) => {
+            if (node.isMesh) {
+                // Create a new material instance for each mesh
+                node.material = new THREE.MeshPhongMaterial().copy(node.material);
+                
+                // Ensure emissiveIntensity is set to 0 initially
+                node.material.emissiveIntensity = 0;
+            }
+        });
+
+        return clone;
+    }
+
     for (let i = 0; i < satelliteCount; i++) {
-        const satelliteMesh = satelliteModel.clone();
+        const satelliteMesh = cloneModelWithNewMaterials(satelliteModel);
         scene.add(satelliteMesh);
         satelliteMeshes.push(satelliteMesh);
     }
+
     if (DEBUG) console.log(`${satelliteMeshes.length} satellite meshes created`);
 }
 
@@ -256,11 +273,13 @@ function updateSatellitePositions() {
         // Apply visibility factor to satellite material
         satelliteMeshes[i].traverse((child) => {
             if (child.isMesh) {
+                /*
                 if (!child.material.originalColor) {
                     child.material.originalColor = child.material.color.clone();
                 }
                 const brightColor = child.material.originalColor.clone().multiplyScalar(1 + visibilityFactor);
                 child.material.color.copy(brightColor);
+                */
                 //if visibilityFactor > 0
                 child.material.emissiveIntensity = visibilityFactor;
             }
@@ -282,18 +301,18 @@ function calculateVisibilityFactor(position) {
     const facingFactor = normalizedPos.z;
     
     // Calculate distance from the (0, 0) point in the xy-plane
-    const xyDistance = Math.sqrt((normalizedPos.x-1.5) * (normalizedPos.x-1.5) + normalizedPos.y * normalizedPos.y);
+    const xyDistance = Math.sqrt((normalizedPos.x) * (normalizedPos.x) + normalizedPos.y * normalizedPos.y);
     
     // Combine these factors
     // We want high visibility when z is positive (facing camera) and xy distance is small (near center)
     let visibilityFactor = 0.0;
-    if (facingFactor > 0){
-        visibilityFactor = (2.0 - xyDistance);
+    if (normalizedPos.z > 0){
+        visibilityFactor = (3.0 - xyDistance);
     }
     // Clamp the value between 0 and 1, and apply a power to enhance the effect
     visibilityFactor = Math.pow(Math.max(0, Math.min(1, visibilityFactor)), 2);
 
-    return visibilityFactor;
+    return visibilityFactor*2;
 }
 
 
