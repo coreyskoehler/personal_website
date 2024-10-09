@@ -85,28 +85,31 @@ public:
     GlobeController()
     {
         initializeLetterPositions();
-        satellites.emplace_back(7, 0, 0, 0.005, ' ', 1);
-        satellites.emplace_back(0, 7, 0, 0.03, ' ', 1);
-        satellites.emplace_back(0, 7.5, 0, 0.07, ' ', 1);
-        satellites.emplace_back(7, 0, 0, 0.005, ' ', 1);
-        satellites.emplace_back(0, 7, 0, 0.03, ' ', 1);
-        satellites.emplace_back(0, 7.5, 0, 0.07, ' ', 1);
+        satellites.emplace_back(7, -1, -1, 0.005, ' ', 1);
+        satellites.emplace_back(-1, 7, 1, 0.03, ' ', 1);
+        satellites.emplace_back(1, 7.5, -1, 0.07, ' ', 1);
+        satellites.emplace_back(7, 1, 1, 0.005, ' ', 1);
+        satellites.emplace_back(-1, 7, 2, 0.03, ' ', 1);
+        satellites.emplace_back(1, 7.5, -2, 0.07, ' ', 1);
         satellites.emplace_back(-6, 3, 2, 0.04, ' ', 1);
         satellites.emplace_back(5, -4, 1, 0.06, ' ', 1);
         satellites.emplace_back(2, 6, -3, 0.02, ' ', 1);
         satellites.emplace_back(-4, -5, 2, 0.08, ' ', 1);
         satellites.emplace_back(3, 3, 6, 0.03, ' ', 1);
-        satellites.emplace_back(-5, 0, 5, 0.005, ' ', 1);
+        satellites.emplace_back(-5, 1, 5, 0.005, ' ', 1);
         satellites.emplace_back(1, -7, -1, 0.07, ' ', 1);
         satellites.emplace_back(6, 2, -4, 0.04, ' ', 1);
         satellites.emplace_back(-3, -6, 3, 0.001, ' ', 1);
-        satellites.emplace_back(4, 5, -2, 0.03, ' ', 1);
-        satellites.emplace_back(-2, 4, 6, 0.05, ' ', 1);
-        satellites.emplace_back(0, -5, -5, 0.02, ' ', 1);
-        satellites.emplace_back(5, 0, 5, 0.07, ' ', 1);
-        satellites.emplace_back(-6, -3, -3, 0.004, ' ', 1);
-        satellites.emplace_back(2, -2, 7, 0.1, ' ', 1);
-        LOG("GlobeController constructed");
+        satellites.emplace_back(8, -1, 1, 0.005, ' ', 1);
+        satellites.emplace_back(1, 8.5, -1, 0.03, ' ', 1);
+        satellites.emplace_back(2, 7, 1, 0.07, ' ', 1);
+        satellites.emplace_back(7.5, 1, -1, 0.005, ' ', 1);
+        satellites.emplace_back(-1, 7.5, 1, 0.03, ' ', 1);
+        satellites.emplace_back(1, 8.5, -2, 0.07, ' ', 1);
+        satellites.emplace_back(-6.5, 3.5, 2.5, 0.04, ' ', 1);
+        satellites.emplace_back(6, -5, 1.5, 0.06, ' ', 1);
+        satellites.emplace_back(2.5, 7, -3.5, 0.02, ' ', 1);
+                LOG("GlobeController constructed");
     }
 
     void createSatellitesFromString(const std::string &text, double startPhi, double startTheta, const std::string &link, double speed, double baseRadius = 7.0, double letterSpacing = 0.5)
