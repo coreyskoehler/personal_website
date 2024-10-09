@@ -6,16 +6,14 @@ This project creates a personal website featuring an interactive 3D globe using 
 
 ```
 personal_website/
-├── main_page/
-│   ├── index.html
-│   ├── styles.css
-│   ├── main.js
-│   ├── globe.cpp
-│   ├── textures/
-│   └── [compiled WASM files]
+├── index.html
+├── styles.css
+├── main.js
+├── globe.cpp
+├── textures/
+├── [compiled WASM files]
 └── resume/
     └── index.html
-```
 
 ## Key Features
 
