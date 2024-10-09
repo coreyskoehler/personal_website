@@ -53,15 +53,25 @@ private:
     std::vector<Satellite> satellites;
     std::unordered_map<char, std::vector<std::vector<double>>> letterPositions;
     std::vector<std::pair<int, int>> words;
+    std::vector<std::string> wordLinks;
 
     void initializeLetterPositions() {
         // Define letter shapes (simplified for this example)
-        //letterPositions['R'] = {{0,0}, {0,0.0872665}, {0,2*0.0872665}, {1*0.0872665,2*0.0872665}, {2*0.0872665,1*0.0872665}, {0.0872665,0.0872665}, {2*0.0872665,0}};
         letterPositions['R'] = {{0, 0, 0, 1}, {0.015,0.005, 4*M_PI/10, 0.95}};
         letterPositions['E'] = {{0, 0, 0, 1}, {0.03,0.03, M_PI/2, 0.99}, {0.005, 0.03, M_PI/2, 0.97}, {-0.03, 0.03, M_PI/2, 0.98}};
         letterPositions['S'] = {{0.03, 0.03, M_PI/2, 1}, {0.0,0.03, M_PI/(4.2), 0.95},  {-0.03, 0.03, M_PI/2, 0.97}};
-        letterPositions['U'] = {{0, 0, 0, 1}, {0.0, 0.06, 0, 0.98},  {-0.03, 0.03, M_PI/2, 0.95}};
+        letterPositions['U'] = {{0, 0, 0, 1}, {0.0, 0.06, 0, 0.98},  {-0.03, 0.045, M_PI/2, 0.95}};
         letterPositions['M'] = {{0, 0, 0, 1}, {0.0, 0.025, M_PI/6, 0.95}, {0.0, 0.045, 5*M_PI/6, 0.96},  {0, 0.06, 0, 1}};
+        letterPositions['L'] = {{0, 0.06, 0, 1}, {-0.03, 0.06, M_PI/2, 0.95}};
+        letterPositions['I'] = {{0.00, 0.03, 0, 0.92}};
+        letterPositions['N'] = {{0, 0, 0, 0.92}, {0.0, 0.06, 0, 0.9},  {0.03, 0.03, M_PI/2, 0.89}};
+        letterPositions['K'] = {{0, 0.01, 0, 1}, {-0.03, 0.035, M_PI/4, 0.78},  {0.03, 0.035, 3*M_PI/4, 0.80}};
+        letterPositions['D'] = {{0, 0.01, 0, 1}, {0.03, 0.045, M_PI/4, 0.95},  {-0.03, 0.045, 3*M_PI/4, 0.93}};
+        letterPositions['G'] = {{-0.01, 0.09, 0, 1.0}, {0.02, -0.05, 0, 0.78}, {-0.01, -0.04, M_PI/2, 0.75}, {-0.06, -0.05, M_PI/2, 0.75}, {0.04, 0.01, M_PI/2, 0.83}};
+        letterPositions['T'] = {{0, 0.015, 0, 0.92}, {0.03, 0.03, M_PI/2, 1}};
+        letterPositions['H'] = {{0, 0.00, 0, 1}, {0, 0.06, 0, 1}, {0.00, 0.03, M_PI/2, 0.89}};
+        //letterPositions['B'] = {{0, 0.03, 0, 1}, {0, 0.2, 0, 0.75}, {0.00, 0.09, M_PI/2, 0.89}, {-0.03, 0.09, M_PI/2, 0.89}};
+        letterPositions['B'] = {{0, 0.015, 0, 1}, {-0.01, 0.25, M_PI/4, 0.73}, {0.00, 0.09, M_PI/2, 0.89}, {-0.03, 0.09, M_PI/2, 0.89}};
         // Add more letters as needed
          LOG("Letter positions initialized");
     }
@@ -69,12 +79,32 @@ private:
 public:
     GlobeController() {
         initializeLetterPositions();
+        satellites.emplace_back(7, 0, 0, 0.005, ' ', 1);
+        satellites.emplace_back(0, 7, 0, 0.03, ' ', 1);
+        satellites.emplace_back(0, 7.5, 0, 0.07, ' ', 1);
+        satellites.emplace_back(7, 0, 0, 0.005, ' ', 1);
+        satellites.emplace_back(0, 7, 0, 0.03, ' ', 1);
+        satellites.emplace_back(0, 7.5, 0, 0.07, ' ', 1);
+        satellites.emplace_back(-6, 3, 2, 0.04, ' ', 1);
+        satellites.emplace_back(5, -4, 1, 0.06, ' ', 1);
+        satellites.emplace_back(2, 6, -3, 0.02, ' ', 1);
+        satellites.emplace_back(-4, -5, 2, 0.08, ' ', 1);
+        satellites.emplace_back(3, 3, 6, 0.03, ' ', 1);
+        satellites.emplace_back(-5, 0, 5, 0.005, ' ', 1);
+        satellites.emplace_back(1, -7, -1, 0.07, ' ', 1);
+        satellites.emplace_back(6, 2, -4, 0.04, ' ', 1);
+        satellites.emplace_back(-3, -6, 3, 0.001, ' ', 1);
+        satellites.emplace_back(4, 5, -2, 0.03, ' ', 1);
+        satellites.emplace_back(-2, 4, 6, 0.05, ' ', 1);
+        satellites.emplace_back(0, -5, -5, 0.02, ' ', 1);
+        satellites.emplace_back(5, 0, 5, 0.07, ' ', 1);
+        satellites.emplace_back(-6, -3, -3, 0.004, ' ', 1);
+        satellites.emplace_back(2, -2, 7, 0.1, ' ', 1);
         LOG("GlobeController constructed");
     }
 
-    void createSatellitesFromString(const std::string& text, double startPhi, double startTheta, double baseRadius = 7.0, double letterSpacing = 0.5) {
+    void createSatellitesFromString(const std::string& text, double startPhi, double startTheta, const std::string& link, double speed, double baseRadius = 7.0, double letterSpacing = 0.5) {
         LOG(("Creating satellites for text: " + text).c_str());
-        //satellites.clear();
         double angleStep = 0.085;
         double currentTheta = startTheta;
         int sizePrev = satellites.size();
@@ -104,15 +134,33 @@ public:
                     y *= scale;
                     z *= scale;
 
-                    satellites.emplace_back(x, y, z, 0.0, c, pos[2]);
+                    satellites.emplace_back(x, y, z, speed, c, pos[2]);
                 }
                 sizeNow += pointCount;
             }
             currentTheta -= angleStep;
         }
         words.push_back({sizePrev, sizeNow});
+        wordLinks.push_back(link); // Initialize with empty link
+        LOG(("Pushed back: " + link).c_str());
         LOG(("Created " + std::to_string(satellites.size()) + " satellites").c_str());
     }
+
+    std::vector<int> getWordStartIndices() {
+        std::vector<int> startIndices;
+        for (const auto& wordPair : words) {
+            startIndices.push_back(wordPair.first);
+        }
+        return startIndices;
+    }
+
+    std::string getWordLinkByIndex(int index) {
+        if (index >= 0 && index < words.size()) {
+            return wordLinks[index];
+        }
+        return ""; // Return empty string if index is out of bounds
+    }
+
 
     void updateSatellites(double deltaTime) {
         for (auto& satellite : satellites) {
@@ -133,7 +181,6 @@ public:
             positions.push_back(satellite.y);
             positions.push_back(satellite.z);
         }
-        //LOG(("Getting positions for " + std::to_string(satellites.size()) + " satellites").c_str());
         return positions;
     }
 
@@ -142,7 +189,6 @@ public:
         for (const auto& satellite : satellites) {
             letters.push_back(satellite.letter);
         }
-        //LOG(("Getting letters for " + std::to_string(satellites.size()) + " satellites").c_str());
         return letters;
     }
 
@@ -176,9 +222,10 @@ extern "C" {
         delete controller;
     }
 
-    void createSatellitesFromString(GlobeController* controller, const char* text, double startPhi, double startTheta) {
+    void createSatellitesFromString(GlobeController* controller, const char* text, double startPhi, double startTheta, const char* link, double speed) {
         LOG(("Creating satellites from string: " + std::string(text)).c_str());
-        controller->createSatellitesFromString(std::string(text), startPhi, startTheta);
+        LOG(("Recieved link: " + std::string(link)).c_str());
+        controller->createSatellitesFromString(std::string(text), startPhi, startTheta, std::string(link), speed);
     }
 
     void updateSatellites(GlobeController* controller, double deltaTime) {
@@ -217,4 +264,21 @@ extern "C" {
     int getSatelliteCount(GlobeController* controller) {
         return controller->getSatelliteRotations().size();
     }
+
+    int* getWordStartIndices(GlobeController* controller, int* size) {
+        std::vector<int> indices = controller->getWordStartIndices();
+        *size = indices.size();
+        int* result = (int*)malloc(indices.size() * sizeof(int));
+        std::copy(indices.begin(), indices.end(), result);
+        return result;
+    }
+
+    const char* getWordLinkByIndex(GlobeController* controller, int index) {
+        static std::string result;
+        result = controller->getWordLinkByIndex(index);
+        return result.c_str();
+    }
+
+
+
 }

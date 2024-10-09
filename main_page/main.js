@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 const DEBUG = true;
 
-let isModuleReady = false;
 let isAnimationStarted = false;
 
 function waitForModule() {
@@ -19,10 +18,9 @@ async function initializeApp() {
     await waitForModule();
     
     // Your initialization code goes here
-    console.log("Module is ready");
+    if (DEBUG) console.log("Module is ready");
     if (DEBUG) console.log("WebAssembly module initialized");
     initializeGlobeController();
-    isModuleReady = true;
 
     // Load the satellite model using GLTFLoader
     const loader = new GLTFLoader();
@@ -142,14 +140,15 @@ function initializeGlobeController() {
             if (DEBUG) console.log("GlobeController created successfully, pointer:", globeController);
             
             // Test the creation of satellites
-            const createSatellitesFromString = Module.cwrap('createSatellitesFromString', null, ['number', 'string', 'number', 'number']);
-            createSatellitesFromString(globeController, "RESUME", 0, 0);
+            const createSatellitesFromString = Module.cwrap('createSatellitesFromString', null, ['number', 'string', 'number', 'number', 'string', 'number']);
+            createSatellitesFromString(globeController, "RESUME", 0.0, -1, "../resume/index.html", 0.005);
 
-            createSatellitesFromString(globeController, "SEE", 0, 1);
-
-            createSatellitesFromString(globeController, "SEE", 0, 2);
-            createSatellitesFromString(globeController, "SEE", 0, 3);
-            createSatellitesFromString(globeController, "SEE", 0, 4);
+            createSatellitesFromString(globeController, "LINKEDIN", -0.2, 0.5, "https://www.linkedin.com/in/coreyskoehler/", 0.007);
+            createSatellitesFromString(globeController, "GITHUB", 0.0, 3, "https://github.com/coreyskoehler", 0.003);
+            //createSatellitesFromString(globeController, "SOURCE", 0, 3, "https://github.com/coreyskoehler/personal_website");
+            //createSatellitesFromString(globeController, "SEE", 0, 2, "https://www.fox.com/");
+            //createSatellitesFromString(globeController, "SEE", 0, 3, "https://www.cbs.com/");
+            //createSatellitesFromString(globeController, "SEE", 0, 4, "https://www.github.com/");
 
             if (DEBUG) console.log("Satellites created, getting count");
             const getSatelliteCount = Module.cwrap('getSatelliteCount', 'number', ['number']);
@@ -205,10 +204,7 @@ function createSatelliteMeshes(satelliteModel) {
 
 let globeRotation = new THREE.Euler(0, 0, 0, 'XYZ');
 let defaultRotationSpeed = 0.001; 
-//let defaultRotationSpeed = 0.0;
-// Interaction
-let isDragging = false;
-let previousMousePosition = { x: 0, y: 0 };
+
 
 function calculateOrbitalFrame(position) {
     const radialVector = position.clone().normalize();
@@ -373,14 +369,18 @@ window.addEventListener('resize', () => {
 });
 
 
-
+/*
 document.getElementById('globe-canvas'). addEventListener('mousedown', (e) => {
     isDragging = true;
 });
+*/
 
-//let isDragging = false;
+let isMouseDown = false;
+let isDragging = false;
 let hasInteracted = false;
 let previousPosition = { x: 0, y: 0 };
+let mouseDownTime = 0;
+let mouseDownPosition = { x: 0, y: 0 };
 
 // Helper function to get position from either mouse or touch event
 function getEventPosition(event) {
@@ -393,57 +393,72 @@ function getEventPosition(event) {
 
 // Function to handle both mouse and touch move events
 function handleMove(event) {
-    if (isDragging) {
+    if (isMouseDown) {
         const currentPosition = getEventPosition(event);
-        //console.log('Current position:', currentPosition); // Debugging line
-
-        const deltaMove = {
-            x: currentPosition.x - previousPosition.x,
-            y: currentPosition.y - previousPosition.y
-        };
-        //console.log('Delta move:', deltaMove); // Debugging line
-
-        // Update globe rotation
-        globeRotation.y += deltaMove.x * 0.01;
-        globeRotation.x += deltaMove.y * 0.01;
-
-        // Apply rotation to the globe mesh
-        globe.rotation.copy(globeRotation);
-
-        // Update satellite positions
-        updateSatellitePositions();
-
-        if (!hasInteracted) {
-            defaultRotationSpeed = 0.00005;
-            //defaultRotationSpeed = 0.0;
-            hasInteracted = true;
+        const distance = Math.sqrt(
+            Math.pow(currentPosition.x - mouseDownPosition.x, 2) +
+            Math.pow(currentPosition.y - mouseDownPosition.y, 2)
+        );
+        
+        if (distance > 5) { // Consider it a drag if moved more than 5 pixels
+            isDragging = true;
         }
 
-        previousPosition = currentPosition;
+        if (isDragging) {
+            const deltaMove = {
+                x: currentPosition.x - previousPosition.x,
+                y: currentPosition.y - previousPosition.y
+            };
+
+            // Update globe rotation
+            globeRotation.y += deltaMove.x * 0.01;
+            globeRotation.x += deltaMove.y * 0.01;
+
+            // Apply rotation to the globe mesh
+            globe.rotation.copy(globeRotation);
+
+            // Update satellite positions
+            updateSatellitePositions();
+
+            if (!hasInteracted) {
+                defaultRotationSpeed = 0.00005;
+                //defaultRotationSpeed = 0.00000;
+                hasInteracted = true;
+            }
+
+            previousPosition = currentPosition;
+        }
     }
 }
 
 // Mouse events
 document.addEventListener('mousedown', (e) => {
-    isDragging = true;
-    previousPosition = getEventPosition(e);
-    //console.log('Mouse down at:', previousPosition); // Debugging line
+    isMouseDown = true;
+    isDragging = false;
+    mouseDownTime = Date.now();
+    mouseDownPosition = getEventPosition(e);
+    previousPosition = mouseDownPosition;
 });
 
 document.addEventListener('mousemove', (e) => {
     handleMove(e);
 });
 
-document.addEventListener('mouseup', () => {
+document.addEventListener('mouseup', (e) => {
+    if (isMouseDown && !isDragging && (Date.now() - mouseDownTime < 200)) {
+        handleClick(e);
+    }
+    isMouseDown = false;
     isDragging = false;
-    //console.log('Mouse up'); // Debugging line
 });
 
 // Touch events
 document.addEventListener('touchstart', (e) => {
-    isDragging = true;
-    previousPosition = getEventPosition(e);
-    //console.log('Touch start at:', previousPosition); // Debugging line
+    isMouseDown = true;
+    isDragging = false;
+    mouseDownTime = Date.now();
+    mouseDownPosition = getEventPosition(e);
+    previousPosition = mouseDownPosition;
 });
 
 document.addEventListener('touchmove', (e) => {
@@ -451,10 +466,49 @@ document.addEventListener('touchmove', (e) => {
     handleMove(e);
 }, {passive:false});
 
-document.addEventListener('touchend', () => {
+document.addEventListener('touchend', (e) => {
+    if (isMouseDown && !isDragging && (Date.now() - mouseDownTime < 200)) {
+        handleClick(e);
+    }
+    isMouseDown = false;
     isDragging = false;
-    //console.log('Touch end'); // Debugging line
 });
+
+// Click handling
+function handleClick(event) {
+    // Calculate normalized device coordinates
+    const rect = event.target.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    // Log word start indices
+    if (DEBUG) console.log("X: ", x);
+    if (DEBUG) console.log("Y: ", y);
+    if (Math.abs(x) < 0.250 && Math.abs(y) < 0.250){
+        const getWordStartIndices = Module.cwrap('getWordStartIndices', 'number', ['number', 'number']);
+        const sizePtr = Module._malloc(4);
+        const indicesPtr = getWordStartIndices(globeController, sizePtr);
+        const size = Module.getValue(sizePtr, 'i32');
+        
+        let wordStartIndices = [];
+        for (let i = 0; i < size; i++) {
+            wordStartIndices.push(Module.getValue(indicesPtr + i * 4, 'i32'));
+        }
+
+        Module._free(sizePtr);
+        Module._free(indicesPtr);
+        const linkDistFromCenter = 2.0;
+        const getWordLinkByIndexFunc = Module.cwrap('getWordLinkByIndex', 'string', ['number', 'number']);
+        for(let indexWords = 0; indexWords < wordStartIndices.length; indexWords ++){
+            let indexSat = wordStartIndices[indexWords];
+            if (satelliteMeshes[indexSat].position.z > 0 && Math.abs(satelliteMeshes[indexSat].position.x) < linkDistFromCenter &&  Math.abs(satelliteMeshes[indexSat].position.y) < linkDistFromCenter) {
+                const link = getWordLinkByIndexFunc(globeController, indexWords);
+                window.location.href = link;
+            }
+        }
+    }
+    
+}
 
 
 // Clean up when the page is unloaded
@@ -463,3 +517,4 @@ window.addEventListener('unload', () => {
         Module._destroyGlobeController(globeController);
     }
 });
+
