@@ -1,70 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Main Page</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Main Page</title>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="textures/favicon/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="textures/favicon/favicon-16x16.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="textures/favicon/apple-touch-icon.png">
-    <link rel="manifest" href="textures/favicon/site.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="textures/favicon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="textures/favicon/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="textures/favicon/apple-touch-icon.png">
+  <link rel="manifest" href="textures/favicon/site.webmanifest">
 
-    <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css">
 
-    <style>
-      #text {
-          position: relative;
-      }
+  <style>
+    #text {
+      position: relative;
+    }
 
-      .tooltip {
-          display: inline;
-      }
+    .tooltip {
+      display: inline;
+    }
 
-      .tooltip .asterisk {
-          color: rgb(2, 109, 196);
-          cursor: pointer;
-      }
+    .tooltip .asterisk {
+      color: rgb(2, 109, 196);
+      cursor: pointer;
+    }
 
-      .tooltip .tooltiptext {
-          visibility: hidden;
-          width: 100%;
-          background-color: rgba(85, 85, 85, 0.9);
-          color: #fff;
-          text-align: left;
-          border-radius: 6px;
-          padding: 10px;
-          position: absolute;
-          z-index: 1;
-          left: 0;
-          top: 100%;
-          margin-top: 5px;
-          opacity: 0;
-          transition: opacity 0.3s;
-          font-size: 0.9em;
-          line-height: 1.4;
-          box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      }
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 100%;
+      background-color: rgba(85, 85, 85, 0.9);
+      color: #fff;
+      text-align: left;
+      border-radius: 6px;
+      padding: 10px;
+      position: absolute;
+      z-index: 1;
+      left: 0;
+      top: 100%;
+      margin-top: 5px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-size: 0.9em;
+      line-height: 1.4;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
 
-      .tooltip:hover .tooltiptext {
-          visibility: visible;
-          opacity: 1;
-      }
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+      opacity: 1;
+    }
   </style>
 </head>
+
 <body>
-    <div id="header">
-        <h1>Corey S. Koehler</h1>
-        <div id="text">
-          <p>Explore the world below to learn more<span class="tooltip"><span class="asterisk">*</span>
-              <span class="tooltiptext">A Note on Scale: This visualization uses altered proportions for clarity. Moon: Actual size ~1/4 Earth's radius, shown smaller. Moon's orbit: Actually 60 Earth radii away, depicted closer. Satellites: Represented mostly in Medium Earth Orbit (MEO), some much below.</span>
-          </span></p>
-      </div>
+  <div id="header">
+    <h1>Corey S. Koehler</h1>
+    <div id="text">
+      <p>Explore the world below to learn more<span class="tooltip"><span class="asterisk">*</span>
+          <span class="tooltiptext">A Note on Scale: This visualization uses altered proportions for clarity. Moon:
+            Actual size ~1/4 Earth's radius, shown smaller. Moon's orbit: Actually 60 Earth radii away, depicted closer.
+            Satellites: Represented mostly in Medium Earth Orbit (MEO), some much below.</span>
+        </span></p>
     </div>
-    <div id="globe-container">
-        <canvas id="globe-canvas"></canvas>
-    </div>
-    <script type="importmap">
+  </div>
+  <div id="globe-container">
+    <canvas id="globe-canvas"></canvas>
+  </div>
+  <script type="importmap">
         {
           "imports": {
             "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js",
@@ -72,7 +76,8 @@
           }
         }
     </script>
-    <script src="globe.out.js"></script>
-    <script type="module" src="main.js"></script>
+  <script src="globe.out.js"></script>
+  <script type="module" src="main.js"></script>
 </body>
+
 </html>

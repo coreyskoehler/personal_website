@@ -6,17 +6,17 @@ let isAnimationStarted = false;
 
 function waitForModule() {
     return new Promise((resolve) => {
-      if (Module.calledRun) {
-        resolve();
-      } else {
-        Module.onRuntimeInitialized = resolve;
-      }
+        if (Module.calledRun) {
+            resolve();
+        } else {
+            Module.onRuntimeInitialized = resolve;
+        }
     });
 }
-  
+
 async function initializeApp() {
     await waitForModule();
-    
+
     // Your initialization code goes here
     if (DEBUG) console.log("Module is ready");
     if (DEBUG) console.log("WebAssembly module initialized");
@@ -24,11 +24,11 @@ async function initializeApp() {
 
     // Load the satellite model using GLTFLoader
     const loader = new GLTFLoader();
-    loader.load('textures/super_dishless_sat-opt.glb', 
+    loader.load('textures/super_dishless_sat-opt.glb',
         (gltf) => {
             if (DEBUG) console.log("Satellite model loaded successfully");
             const satelliteModel = gltf.scene;
-            
+
             // Change the material of the model to have a faint blue glow
             satelliteModel.traverse((child) => {
                 if (child.isMesh) {
@@ -42,7 +42,7 @@ async function initializeApp() {
             });
             satelliteModel.scale.set(0.6, 0.6, 0.6);
             createSatelliteMeshes(satelliteModel);
-            
+
             // Start the animation only after everything is loaded
             if (!isAnimationStarted) {
                 isAnimationStarted = true;
@@ -135,10 +135,10 @@ function initializeGlobeController() {
         if (DEBUG) console.log("Attempting to create GlobeController");
         const createGlobeController = Module.cwrap('createGlobeController', 'number', []);
         globeController = createGlobeController();
-        
+
         if (globeController) {
             if (DEBUG) console.log("GlobeController created successfully, pointer:", globeController);
-            
+
             // Test the creation of satellites
             const createSatellitesFromString = Module.cwrap('createSatellitesFromString', null, ['number', 'string', 'number', 'number', 'string', 'number']);
             createSatellitesFromString(globeController, "RESUME", 0.0, -1, "../resume/index.html", 0.005);
@@ -182,7 +182,7 @@ function createSatelliteMeshes(satelliteModel) {
             if (node.isMesh) {
                 // Create a new material instance for each mesh
                 node.material = new THREE.MeshPhongMaterial().copy(node.material);
-                
+
                 // Ensure emissiveIntensity is set to 0 initially
                 node.material.emissiveIntensity = 0;
             }
@@ -203,14 +203,14 @@ function createSatelliteMeshes(satelliteModel) {
 
 
 let globeRotation = new THREE.Euler(0, 0, 0, 'XYZ');
-let defaultRotationSpeed = 0.001; 
+let defaultRotationSpeed = 0.001;
 
 
 function calculateOrbitalFrame(position) {
     const radialVector = position.clone().normalize();
     const tangentialVector = new THREE.Vector3(-position.y, position.x, 0).normalize();
     const normalVector = new THREE.Vector3().crossVectors(radialVector, tangentialVector);
-    
+
     return new THREE.Matrix4().makeBasis(tangentialVector, normalVector, radialVector);
 }
 function updateSatellitePositions() {
@@ -227,34 +227,34 @@ function updateSatellitePositions() {
 
     const positionsPtr = Module._malloc(satelliteCount * 3 * 8);  // 3 doubles per satellite
     const rotationsPtr = Module._malloc(satelliteCount * 8);  // 1 double per satellite for rotation
-    
+
     Module._getSatellitePositions(globeController, positionsPtr);
     Module._getSatelliteRotations(globeController, rotationsPtr);
-    
+
     const positions = new Float64Array(Module.HEAPF64.buffer, positionsPtr, satelliteCount * 3);
     const rotations = new Float64Array(Module.HEAPF64.buffer, rotationsPtr, satelliteCount);
-    
+
     for (let i = 0; i < satelliteCount; i++) {
         if (!satelliteMeshes[i]) {
             console.warn(`Satellite mesh ${i} not found`);
             continue;
         }
 
-        const originalPos = new THREE.Vector3(positions[i*3], positions[i*3+1], positions[i*3+2]);
-        
+        const originalPos = new THREE.Vector3(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
+
         // Calculate the orbital frame before applying globe rotation
         const orbitalFrame = calculateOrbitalFrame(originalPos);
-        
+
         // Apply globe rotation to satellite position
         const rotatedPos = originalPos.applyEuler(globeRotation);
         satelliteMeshes[i].position.copy(rotatedPos);
-        
+
         // Apply globe rotation to orbital frame
         orbitalFrame.premultiply(new THREE.Matrix4().makeRotationFromEuler(globeRotation));
-        
+
         // Set satellite orientation based on rotated orbital frame
         satelliteMeshes[i].quaternion.setFromRotationMatrix(orbitalFrame);
-        
+
         // Adjust rotation to ensure the "front" of the satellite faces the Earth
         satelliteMeshes[i].rotateOnAxis(new THREE.Vector3(-1, 0, 0), Math.PI / 2);
 
@@ -265,7 +265,7 @@ function updateSatellitePositions() {
 
         // Calculate visibility based on position
         const visibilityFactor = calculateVisibilityFactor(rotatedPos);
-        
+
         // Apply visibility factor to satellite material
         satelliteMeshes[i].traverse((child) => {
             if (child.isMesh) {
@@ -283,7 +283,7 @@ function updateSatellitePositions() {
 
 
     }
-    
+
     Module._free(positionsPtr);
     Module._free(rotationsPtr);
 }
@@ -295,20 +295,20 @@ function calculateVisibilityFactor(position) {
     // Calculate how much the satellite is facing the camera
     // 1 means directly facing, 0 means perpendicular, -1 means facing away
     const facingFactor = normalizedPos.z;
-    
+
     // Calculate distance from the (0, 0) point in the xy-plane
     const xyDistance = Math.sqrt((normalizedPos.x) * (normalizedPos.x) + normalizedPos.y * normalizedPos.y);
-    
+
     // Combine these factors
     // We want high visibility when z is positive (facing camera) and xy distance is small (near center)
     let visibilityFactor = 0.0;
-    if (normalizedPos.z > 0){
+    if (normalizedPos.z > 0) {
         visibilityFactor = (3.0 - xyDistance);
     }
     // Clamp the value between 0 and 1, and apply a power to enhance the effect
     visibilityFactor = Math.pow(Math.max(0, Math.min(1, visibilityFactor)), 2);
 
-    return visibilityFactor*2;
+    return visibilityFactor * 2;
 }
 
 
@@ -318,17 +318,17 @@ function createTextSprite(text) {
     context.font = 'Bold 60px Arial';
     context.fillStyle = 'rgba(255,255,255,1)';
     context.fillText(text, 0, 60);
-    
+
     const texture = new THREE.Texture(canvas);
     texture.needsUpdate = true;
-    
+
     const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
     const sprite = new THREE.Sprite(spriteMaterial);
     sprite.scale.set(0.5, 0.5, 1);
     return sprite;
 }
 let moonOrbitRadius = 9; // Distance from Earth's center
-let moonOrbitSpeed = defaultRotationSpeed/2; // Speed of orbit
+let moonOrbitSpeed = defaultRotationSpeed / 2; // Speed of orbit
 let moonAngle = -0.75; // Current angle of the moon's orbit
 
 function animate() {
@@ -354,7 +354,7 @@ function animate() {
     } else {
         console.warn("GlobeController not initialized in animate function");
     }
-    
+
     renderer.render(scene, camera);
 }
 
@@ -399,7 +399,7 @@ function handleMove(event) {
             Math.pow(currentPosition.x - mouseDownPosition.x, 2) +
             Math.pow(currentPosition.y - mouseDownPosition.y, 2)
         );
-        
+
         if (distance > 5) { // Consider it a drag if moved more than 5 pixels
             isDragging = true;
         }
@@ -464,7 +464,7 @@ document.addEventListener('touchstart', (e) => {
 document.addEventListener('touchmove', (e) => {
     e.preventDefault(); // Prevent scrolling while dragging
     handleMove(e);
-}, {passive:false});
+}, { passive: false });
 
 document.addEventListener('touchend', (e) => {
     if (isMouseDown && !isDragging && (Date.now() - mouseDownTime < 200)) {
@@ -484,12 +484,12 @@ function handleClick(event) {
     // Log word start indices
     if (DEBUG) console.log("X: ", x);
     if (DEBUG) console.log("Y: ", y);
-    if (Math.abs(x) < 0.250 && Math.abs(y) < 0.250){
+    if (Math.abs(x) < 0.250 && Math.abs(y) < 0.250) {
         const getWordStartIndices = Module.cwrap('getWordStartIndices', 'number', ['number', 'number']);
         const sizePtr = Module._malloc(4);
         const indicesPtr = getWordStartIndices(globeController, sizePtr);
         const size = Module.getValue(sizePtr, 'i32');
-        
+
         let wordStartIndices = [];
         for (let i = 0; i < size; i++) {
             wordStartIndices.push(Module.getValue(indicesPtr + i * 4, 'i32'));
@@ -499,15 +499,15 @@ function handleClick(event) {
         Module._free(indicesPtr);
         const linkDistFromCenter = 2.0;
         const getWordLinkByIndexFunc = Module.cwrap('getWordLinkByIndex', 'string', ['number', 'number']);
-        for(let indexWords = 0; indexWords < wordStartIndices.length; indexWords ++){
+        for (let indexWords = 0; indexWords < wordStartIndices.length; indexWords++) {
             let indexSat = wordStartIndices[indexWords];
-            if (satelliteMeshes[indexSat].position.z > 0 && Math.abs(satelliteMeshes[indexSat].position.x) < linkDistFromCenter &&  Math.abs(satelliteMeshes[indexSat].position.y) < linkDistFromCenter) {
+            if (satelliteMeshes[indexSat].position.z > 0 && Math.abs(satelliteMeshes[indexSat].position.x) < linkDistFromCenter && Math.abs(satelliteMeshes[indexSat].position.y) < linkDistFromCenter) {
                 const link = getWordLinkByIndexFunc(globeController, indexWords);
                 window.location.href = link;
             }
         }
     }
-    
+
 }
 
 

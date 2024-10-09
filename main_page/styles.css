@@ -1,4 +1,5 @@
-html, body {
+html,
+body {
     margin: 0;
     padding: 0;
     height: 100%;
@@ -7,7 +8,7 @@ html, body {
     background: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), url('textures/milky_way.jpg') no-repeat center center fixed;
     background-size: cover;
     color: white;
-    
+
 }
 
 #header {
@@ -43,4 +44,3 @@ html, body {
     height: 100%;
     display: block;
 }
-
