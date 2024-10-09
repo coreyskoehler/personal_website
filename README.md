@@ -34,6 +34,7 @@ personal_website/
 ## Setup
 
 1. Compile the WebAssembly module from `globe.cpp`
+- emcc command used: emcc globe.cpp -o globe.out.js -s WASM=1 -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "getValue", "UTF8ToString"]' -s EXPORTED_FUNCTIONS='["_malloc", "_free", "_createGlobeController", "_destroyGlobeController", "_updateSatellites", "_mouseDragSatellites", "_getSatellitePositions", "_getSatelliteLetters", "_getSatelliteCount", "_createSatellitesFromString", "_getSatelliteRotations", "_getWordStartIndices", "_getWordLinkByIndex"]' -s ALLOW_MEMORY_GROWTH=1 -s NO_EXIT_RUNTIME=1 -O3 --bind -s ASSERTIONS=1
 2. Ensure all textures are in the `textures/` directory
 3. Host the project on a web server that supports WebAssembly
 
