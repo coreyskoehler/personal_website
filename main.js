@@ -141,10 +141,10 @@ function initializeGlobeController() {
 
             // Test the creation of satellites
             const createSatellitesFromString = Module.cwrap('createSatellitesFromString', null, ['number', 'string', 'number', 'number', 'string', 'number']);
-            createSatellitesFromString(globeController, "RESUME", 0.0, -1, "resume/index.html", 0.005);
+            createSatellitesFromString(globeController, "RESUME", 0.0, -1, "resume/index.html", 0.005 / 3);
 
-            createSatellitesFromString(globeController, "LINKEDIN", -0.2, 0.5, "https://www.linkedin.com/in/coreyskoehler/", 0.007);
-            createSatellitesFromString(globeController, "GITHUB", 0.0, 3, "https://github.com/coreyskoehler", 0.003);
+            createSatellitesFromString(globeController, "LINKEDIN", -0.2, 0.5, "https://www.linkedin.com/in/coreyskoehler/", 0.007 / 3);
+            createSatellitesFromString(globeController, "GITHUB", 0.0, 3, "https://github.com/coreyskoehler", 0.003 / 3);
             //createSatellitesFromString(globeController, "SOURCE", 0, 3, "https://github.com/coreyskoehler/personal_website");
             //createSatellitesFromString(globeController, "SEE", 0, 2, "https://www.fox.com/");
             //createSatellitesFromString(globeController, "SEE", 0, 3, "https://www.cbs.com/");
@@ -329,7 +329,7 @@ function createTextSprite(text) {
 }
 let moonOrbitRadius = 9; // Distance from Earth's center
 let moonOrbitSpeed = defaultRotationSpeed / 2; // Speed of orbit
-let moonAngle = -0.75; // Current angle of the moon's orbit
+let moonAngle = -0.5; // Current angle of the moon's orbit
 
 function animate() {
     requestAnimationFrame(animate);
